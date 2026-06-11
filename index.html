@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Options Trade Diary | Auto-Save + Advanced Metrics + Dark Mode</title>
+    <title>Options Trade Diary | Strike Price · CE/PE · Edit Trades · Auto-Save</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <style>
@@ -27,10 +27,13 @@
             --btn-reset: #dc2626;
             --btn-export: #10b981;
             --btn-capital: #3b82f6;
+            --btn-edit: #8b5cf6;
+            --btn-edit-bg: #8b5cf6;
             --input-bg: #fefefe;
             --chart-grid: #ddd;
             --success: #10b981;
             --warning: #f59e0b;
+            --danger: #ef4444;
         }
 
         body.dark {
@@ -47,6 +50,7 @@
             --btn-reset: #ef4444;
             --btn-export: #10b981;
             --btn-capital: #2563eb;
+            --btn-edit: #a78bfa;
             --input-bg: #0f172a;
             --chart-grid: #334155;
         }
@@ -58,7 +62,7 @@
         }
 
         .container {
-            max-width: 1500px;
+            max-width: 1600px;
             margin: 0 auto;
         }
 
@@ -121,8 +125,8 @@
 
         .flex-buttons { display: flex; gap: 12px; flex-wrap: wrap; }
         .dashboard { display: flex; flex-wrap: wrap; gap: 24px; }
-        .left-panel { flex: 1.2; min-width: 320px; }
-        .right-panel { flex: 2.5; min-width: 520px; }
+        .left-panel { flex: 1.2; min-width: 350px; }
+        .right-panel { flex: 2.5; min-width: 600px; }
 
         .card {
             background: var(--card-bg);
@@ -140,11 +144,15 @@
             border-left: 5px solid #3b82f6;
             padding-left: 14px;
             color: var(--text-primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .trade-form { display: flex; flex-direction: column; gap: 14px; }
         .form-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
         .form-row label { width: 110px; font-weight: 500; color: var(--text-secondary); }
+        .form-row-small { flex: 1; display: flex; gap: 8px; align-items: center; }
 
         input, select, textarea {
             flex: 1;
@@ -155,35 +163,46 @@
             color: var(--text-primary);
         }
 
+        .strike-group { display: flex; gap: 8px; flex: 1; }
+        .strike-group input { flex: 2; }
+        .strike-group select { flex: 1; }
+
         textarea { min-width: 200px; }
         .badge { background: var(--badge-bg); padding: 4px 10px; border-radius: 30px; font-size: 0.8rem; color: var(--text-primary); }
         .trade-btn { background: var(--btn-primary); color: white; border: none; padding: 10px; border-radius: 40px; font-weight: bold; cursor: pointer; }
         .trade-btn.sell { background: var(--btn-sell); }
+        .trade-btn.edit-mode { background: var(--btn-edit); }
         .trade-table { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-        th, td { padding: 10px 6px; border-bottom: 1px solid var(--border); text-align: left; color: var(--text-primary); }
+        th, td { padding: 10px 6px; border-bottom: 1px solid var(--border); text-align: left; color: var(--text-primary); vertical-align: middle; }
         th { background: var(--table-header); }
+        .edit-btn { background: var(--btn-edit); color: white; border: none; padding: 4px 10px; border-radius: 20px; cursor: pointer; font-size: 0.7rem; margin-right: 4px; }
+        .delete-btn { background: var(--danger); color: white; border: none; padding: 4px 10px; border-radius: 20px; cursor: pointer; font-size: 0.7rem; }
 
         .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 14px;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
             margin-bottom: 20px;
         }
 
         .metric-card {
             background: var(--metric-bg);
             border-radius: 20px;
-            padding: 12px;
+            padding: 10px;
             text-align: center;
             border: 1px solid var(--border);
         }
 
-        .metric-value { font-size: 1.5rem; font-weight: 800; color: var(--text-primary); }
-        .metric-label { font-size: 0.75rem; color: var(--text-secondary); margin-top: 5px; }
+        .metric-value { font-size: 1.3rem; font-weight: 800; color: var(--text-primary); }
+        .metric-label { font-size: 0.7rem; color: var(--text-secondary); margin-top: 4px; }
         .chart-container { max-height: 280px; margin-top: 16px; }
         .notes-msg { font-style: italic; color: var(--text-secondary); font-size: 0.75rem; }
         .auto-save-badge { position: fixed; bottom: 20px; right: 20px; background: var(--success); color: white; padding: 8px 16px; border-radius: 40px; font-size: 0.8rem; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 1000; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 2000; }
+        .modal-content { background: var(--card-bg); border-radius: 28px; padding: 24px; width: 90%; max-width: 500px; border: 1px solid var(--border); }
+        .modal-content h3 { margin-top: 0; color: var(--text-primary); }
+        .modal-buttons { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
         button:active { transform: scale(0.97); }
         @media (max-width: 780px) { .form-row label { width: 100%; } }
     </style>
@@ -191,7 +210,7 @@
 <body>
 <div class="container">
     <div class="header">
-        <h1>📊 Option Master Diary · Auto-Save + Full Analytics</h1>
+        <h1>📊 Option Trade Diary · Strike + CE/PE · Edit Any Entry</h1>
         <div class="flex-buttons">
             <button id="darkModeToggle" class="darkmode-toggle">🌙 Dark Mode</button>
             <button id="resetAllBtn" class="reset-btn">⟳ RESET ALL</button>
@@ -213,6 +232,16 @@
                 <div class="trade-form">
                     <div class="form-row"><label>Scrip Name</label><input type="text" id="scripName" placeholder="NIFTY, BANKNIFTY"></div>
                     <div class="form-row"><label>Expiry Date</label><input type="date" id="expiryDate"></div>
+                    <div class="form-row">
+                        <label>Strike & Type</label>
+                        <div class="strike-group">
+                            <input type="number" id="strikePrice" placeholder="Strike Price" step="5">
+                            <select id="optionType">
+                                <option value="CE">CE (Call)</option>
+                                <option value="PE">PE (Put)</option>
+                            </select>
+                        </div>
+                    </div>
                     <div class="form-row"><label>Lot Size</label><input type="number" id="lotSize" value="50"></div>
                     <div class="form-row"><label>Premium (₹/lot)</label><input type="number" id="premiumBuy" step="0.01" placeholder="Premium"></div>
                     <div class="form-row"><label>Buy Notes</label><textarea id="buyNotes" rows="2"></textarea></div>
@@ -229,7 +258,7 @@
                 </div>
                 <div class="card">
                     <div class="card-title">⚡ Active Positions (Max 3)</div>
-                    <div id="openPositionsList" style="font-size:0.9rem; max-height:180px; overflow-y:auto;"></div>
+                    <div id="openPositionsList" style="font-size:0.85rem; max-height:200px; overflow-y:auto;"></div>
                 </div>
             </div>
         </div>
@@ -240,10 +269,10 @@
                 <div id="metricsContainer" class="metrics-grid"></div>
             </div>
             <div class="card">
-                <div class="card-title">📜 Closed Trades History</div>
+                <div class="card-title">📜 Closed Trades History <span style="font-size:0.7rem;">(✏️ Edit / 🗑️ Delete)</span></div>
                 <div class="trade-table">
                     <table id="historyTable">
-                        <thead><tr><th>Scrip</th><th>Expiry</th><th>Buy Date</th><th>Sell Date</th><th>Lot</th><th>Buy Prem</th><th>Sell Prem</th><th>Gross P&L</th><th>Net P&L</th><th>Buy Notes</th><th>Exit Notes</th></tr></thead>
+                        <thead><tr><th>Scrip</th><th>Expiry</th><th>Strike/Type</th><th>Buy Date</th><th>Sell Date</th><th>Lot</th><th>Buy Prem</th><th>Sell Prem</th><th>Net P&L</th><th>Notes</th><th>Actions</th></tr></thead>
                         <tbody id="historyBody"></tbody>
                     </table>
                 </div>
@@ -257,8 +286,30 @@
 </div>
 <div id="autoSaveBadge" class="auto-save-badge">✓ Auto-saved</div>
 
+<!-- Edit Modal -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <h3>✏️ Edit Closed Trade</h3>
+        <div class="form-row"><label>Scrip</label><input type="text" id="editScrip"></div>
+        <div class="form-row"><label>Expiry</label><input type="date" id="editExpiry"></div>
+        <div class="form-row"><label>Strike</label><input type="number" id="editStrike" step="5"></div>
+        <div class="form-row"><label>Type</label><select id="editType"><option value="CE">CE</option><option value="PE">PE</option></select></div>
+        <div class="form-row"><label>Lot Size</label><input type="number" id="editLotSize"></div>
+        <div class="form-row"><label>Buy Date</label><input type="date" id="editBuyDate"></div>
+        <div class="form-row"><label>Sell Date</label><input type="date" id="editSellDate"></div>
+        <div class="form-row"><label>Buy Premium</label><input type="number" id="editBuyPremium" step="0.01"></div>
+        <div class="form-row"><label>Sell Premium</label><input type="number" id="editSellPremium" step="0.01"></div>
+        <div class="form-row"><label>Buy Notes</label><textarea id="editBuyNotes" rows="2"></textarea></div>
+        <div class="form-row"><label>Exit Notes</label><textarea id="editExitNotes" rows="2"></textarea></div>
+        <div class="modal-buttons">
+            <button id="saveEditBtn" class="trade-btn">💾 Save Changes</button>
+            <button id="cancelEditBtn" class="reset-btn">Cancel</button>
+        </div>
+    </div>
+</div>
+
 <script>
-    // ---------- Charges Configuration ----------
+    // Charges Config
     const BROKERAGE = 20;
     const STT_PERCENT = 0.1;
     const EXCHANGE_RATE = 0.053 / 100;
@@ -277,80 +328,45 @@
     }
     function calculateSTT(premiumTotal) { return premiumTotal * (STT_PERCENT / 100); }
 
-    // ----- Global State -----
+    // Global State
     let capital = 100000;
     let openTrades = [];
     let closedTrades = [];
     let nextId = 1;
     let equityChart = null;
+    let currentEditIndex = -1;
 
-    // ----- Storage Keys -----
+    // Storage Keys
     const STORAGE_KEYS = {
-        CAPITAL: 'option_diary_capital',
-        OPEN_TRADES: 'option_diary_open_trades',
-        CLOSED_TRADES: 'option_diary_closed_trades',
-        NEXT_ID: 'option_diary_next_id'
+        CAPITAL: 'opt_diary_capital_v2',
+        OPEN_TRADES: 'opt_diary_open_v2',
+        CLOSED_TRADES: 'opt_diary_closed_v2',
+        NEXT_ID: 'opt_diary_nextid_v2'
     };
 
-    // ----- Save to localStorage -----
     function saveAllData() {
         try {
             localStorage.setItem(STORAGE_KEYS.CAPITAL, capital.toString());
             localStorage.setItem(STORAGE_KEYS.OPEN_TRADES, JSON.stringify(openTrades));
             localStorage.setItem(STORAGE_KEYS.CLOSED_TRADES, JSON.stringify(closedTrades));
             localStorage.setItem(STORAGE_KEYS.NEXT_ID, nextId.toString());
-            
-            // Show auto-save badge
             const badge = document.getElementById('autoSaveBadge');
             badge.style.opacity = '1';
             setTimeout(() => { badge.style.opacity = '0'; }, 1500);
         } catch(e) { console.error("Save failed:", e); }
     }
 
-    // ----- Load from localStorage -----
     function loadAllData() {
         try {
             const savedCapital = localStorage.getItem(STORAGE_KEYS.CAPITAL);
             if (savedCapital !== null) capital = parseFloat(savedCapital);
-            
             const savedOpen = localStorage.getItem(STORAGE_KEYS.OPEN_TRADES);
             if (savedOpen !== null) openTrades = JSON.parse(savedOpen);
-            
             const savedClosed = localStorage.getItem(STORAGE_KEYS.CLOSED_TRADES);
             if (savedClosed !== null) closedTrades = JSON.parse(savedClosed);
-            
             const savedNextId = localStorage.getItem(STORAGE_KEYS.NEXT_ID);
             if (savedNextId !== null) nextId = parseInt(savedNextId);
-            
-            return true;
-        } catch(e) { 
-            console.error("Load failed:", e);
-            return false;
-        }
-    }
-
-    // Helper functions
-    function updateOpenTradesUI() {
-        const openSelect = document.getElementById('openTradeSelect');
-        openSelect.innerHTML = '<option value="">-- Select position --</option>';
-        openTrades.forEach(t => {
-            let opt = document.createElement('option');
-            opt.value = t.id;
-            opt.textContent = `${t.scrip} | Exp:${t.expiry} | Lots:${t.lotSize} | Buy: ₹${t.buyPremiumPerLot} | ${t.buyDate}`;
-            openSelect.appendChild(opt);
-        });
-        
-        const openListDiv = document.getElementById('openPositionsList');
-        if (openTrades.length === 0) {
-            openListDiv.innerHTML = '<span class="badge">✅ No active positions. Max 3 slots.</span>';
-        } else {
-            let html = `<ul style="margin:0; padding-left:18px;">`;
-            openTrades.forEach(t => { 
-                html += `<li><strong>${t.scrip}</strong> (${t.expiry}) | Lot:${t.lotSize} | Buy ₹${t.buyPremiumPerLot} | Notes: ${t.buyNotes || '-'}</li>`; 
-            });
-            html += `</ul><div class="badge">Open: ${openTrades.length}/3</div>`;
-            openListDiv.innerHTML = html;
-        }
+        } catch(e) { console.error("Load failed:", e); }
     }
 
     function computeNetOnSell(buyObj, sellPremiumPerLot) {
@@ -365,29 +381,74 @@
         return { grossPL, netPL, totalCharges };
     }
 
+    function recalculateTradeNetPL(trade) {
+        let totalBuy = trade.lotSize * trade.buyPremium;
+        let totalSell = trade.lotSize * trade.sellPremium;
+        let grossPL = totalSell - totalBuy;
+        let buyCharges = calculateLegCharges(totalBuy, true);
+        let sellCharges = calculateLegCharges(totalSell, false);
+        let stt = calculateSTT(totalSell);
+        let totalCharges = buyCharges + sellCharges + stt;
+        let netPL = grossPL - totalCharges;
+        return { ...trade, grossPL, netPL, totalCharges };
+    }
+
+    function updateOpenTradesUI() {
+        const openSelect = document.getElementById('openTradeSelect');
+        openSelect.innerHTML = '<option value="">-- Select position --</option>';
+        openTrades.forEach(t => {
+            let opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = `${t.scrip} ${t.strike}${t.optionType} | Exp:${t.expiry} | Lots:${t.lotSize} | Buy: ₹${t.buyPremiumPerLot}`;
+            openSelect.appendChild(opt);
+        });
+        const openListDiv = document.getElementById('openPositionsList');
+        if (openTrades.length === 0) {
+            openListDiv.innerHTML = '<span class="badge">✅ No active positions. Max 3 slots.</span>';
+        } else {
+            let html = `<ul style="margin:0; padding-left:18px;">`;
+            openTrades.forEach(t => { 
+                html += `<li><strong>${t.scrip} ${t.strike}${t.optionType}</strong> (${t.expiry}) | Lot:${t.lotSize} | Buy ₹${t.buyPremiumPerLot} | ${t.buyDate}<br><span class="badge">${t.buyNotes || '-'}</span></li>`; 
+            });
+            html += `</ul><div class="badge">Open: ${openTrades.length}/3</div>`;
+            openListDiv.innerHTML = html;
+        }
+    }
+
     function renderHistoryAndMetrics() {
-        // History table
         const historyBody = document.getElementById('historyBody');
         if (closedTrades.length === 0) {
-            historyBody.innerHTML = '<tr><td colspan="11" style="text-align:center;">No closed trades yet</td></tr>';
+            historyBody.innerHTML = '<tr><td colspan="11" style="text-align:center;">No closed trades yet</td>' + '</tr>';
         } else {
             let html = '';
-            closedTrades.forEach(t => {
+            closedTrades.forEach((t, idx) => {
                 html += `<tr>
-                    <td>${escapeHtml(t.scrip)}</td><td>${t.expiry}</td><td>${t.buyDate}</td><td>${t.sellDate}</td>
-                    <td>${t.lotSize}</td><td>₹${t.buyPremium.toFixed(2)}</td><td>₹${t.sellPremium.toFixed(2)}</td>
-                    <td style="color:${t.grossPL>=0?'#10b981':'#ef4444'}">₹${t.grossPL.toFixed(2)}</td>
+                    <td>${escapeHtml(t.scrip)}</td>
+                    <td>${t.expiry}</td>
+                    <td>${t.strike}${t.optionType}</td>
+                    <td>${t.buyDate}</td>
+                    <td>${t.sellDate}</td>
+                    <td>${t.lotSize}</td>
+                    <td>₹${t.buyPremium.toFixed(2)}</td>
+                    <td>₹${t.sellPremium.toFixed(2)}</td>
                     <td style="color:${t.netPL>=0?'#10b981':'#ef4444'}">₹${t.netPL.toFixed(2)}</td>
-                    <td>${escapeHtml(t.buyNotes).substring(0,25)}</td><td>${escapeHtml(t.exitNotes).substring(0,25)}</td>
+                    <td>${escapeHtml(t.buyNotes)}/${escapeHtml(t.exitNotes)}</td>
+                    <td><button class="edit-btn" data-index="${idx}">✏️ Edit</button> <button class="delete-btn" data-index="${idx}">🗑️ Del</button></td>
                 </tr>`;
             });
             historyBody.innerHTML = html;
+            
+            document.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => openEditModal(parseInt(btn.dataset.index)));
+            });
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => { if(confirm("Delete this trade?")) { closedTrades.splice(parseInt(btn.dataset.index),1); saveAllData(); renderHistoryAndMetrics(); } });
+            });
         }
 
-        // Advanced Metrics
+        // Metrics Calculation
         let totalNet = 0, totalGross = 0, totalChargesSum = 0, winners = 0, losers = 0;
-        let allNetPLs = [];
-        let winningTradesList = [], losingTradesList = [];
+        let allNetPLs = [], winningTradesList = [], losingTradesList = [];
         closedTrades.forEach(t => {
             totalNet += t.netPL;
             totalGross += t.grossPL;
@@ -409,8 +470,7 @@
         let finalCapital = capital + totalNet;
         let returnPct = capital ? ((totalNet / capital) * 100).toFixed(2) : 0;
 
-        const metricsContainer = document.getElementById('metricsContainer');
-        metricsContainer.innerHTML = `
+        document.getElementById('metricsContainer').innerHTML = `
             <div class="metric-card"><div class="metric-value">₹${totalNet.toFixed(2)}</div><div class="metric-label">Net P&L</div></div>
             <div class="metric-card"><div class="metric-value">${winRate}%</div><div class="metric-label">Win Rate</div></div>
             <div class="metric-card"><div class="metric-value">₹${avgWin}</div><div class="metric-label">Avg Win</div></div>
@@ -424,7 +484,6 @@
             <div class="metric-card"><div class="metric-value">₹${finalCapital.toFixed(2)}</div><div class="metric-label">Current Equity</div></div>
         `;
 
-        // Equity Curve
         let equityPoints = [capital];
         let running = capital;
         for (let trade of closedTrades) {
@@ -437,45 +496,72 @@
         equityChart = new Chart(ctx, {
             type: 'line',
             data: { labels, datasets: [{ label: 'Equity (₹)', data: equityPoints, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.2 }] },
-            options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `₹${ctx.raw.toFixed(2)}` } } } }
+            options: { responsive: true, maintainAspectRatio: true }
         });
+    }
+
+    function openEditModal(index) {
+        currentEditIndex = index;
+        const trade = closedTrades[index];
+        document.getElementById('editScrip').value = trade.scrip;
+        document.getElementById('editExpiry').value = trade.expiry;
+        document.getElementById('editStrike').value = trade.strike;
+        document.getElementById('editType').value = trade.optionType;
+        document.getElementById('editLotSize').value = trade.lotSize;
+        document.getElementById('editBuyDate').value = trade.buyDate;
+        document.getElementById('editSellDate').value = trade.sellDate;
+        document.getElementById('editBuyPremium').value = trade.buyPremium;
+        document.getElementById('editSellPremium').value = trade.sellPremium;
+        document.getElementById('editBuyNotes').value = trade.buyNotes || '';
+        document.getElementById('editExitNotes').value = trade.exitNotes || '';
+        document.getElementById('editModal').style.display = 'flex';
+    }
+
+    function saveEditedTrade() {
+        const updatedTrade = {
+            ...closedTrades[currentEditIndex],
+            scrip: document.getElementById('editScrip').value,
+            expiry: document.getElementById('editExpiry').value,
+            strike: parseFloat(document.getElementById('editStrike').value),
+            optionType: document.getElementById('editType').value,
+            lotSize: parseInt(document.getElementById('editLotSize').value),
+            buyDate: document.getElementById('editBuyDate').value,
+            sellDate: document.getElementById('editSellDate').value,
+            buyPremium: parseFloat(document.getElementById('editBuyPremium').value),
+            sellPremium: parseFloat(document.getElementById('editSellPremium').value),
+            buyNotes: document.getElementById('editBuyNotes').value,
+            exitNotes: document.getElementById('editExitNotes').value,
+        };
+        const recalc = recalculateTradeNetPL(updatedTrade);
+        closedTrades[currentEditIndex] = recalc;
+        saveAllData();
+        renderHistoryAndMetrics();
+        document.getElementById('editModal').style.display = 'none';
     }
 
     function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])); }
 
-    // ----- Event Handlers with Auto-Save -----
+    // Event Handlers
     function addBuyTrade() {
         if (openTrades.length >= 3) { alert("Maximum 3 open positions allowed."); return; }
         let scrip = document.getElementById('scripName').value.trim();
         let expiry = document.getElementById('expiryDate').value;
+        let strike = parseFloat(document.getElementById('strikePrice').value);
+        let optionType = document.getElementById('optionType').value;
         let lotSize = parseInt(document.getElementById('lotSize').value);
         let premium = parseFloat(document.getElementById('premiumBuy').value);
         let notes = document.getElementById('buyNotes').value;
-        if (!scrip || !expiry || isNaN(lotSize) || lotSize <= 0 || isNaN(premium) || premium <= 0) { alert("Fill all fields correctly."); return; }
-        
+        if (!scrip || !expiry || isNaN(strike) || !optionType || isNaN(lotSize) || lotSize <= 0 || isNaN(premium) || premium <= 0) { alert("Fill all fields (Scrip, Expiry, Strike, CE/PE, Lot, Premium)."); return; }
         let buyDate = new Date().toISOString().slice(0,10);
         let totalPremiumVal = lotSize * premium;
         let buyCharges = calculateLegCharges(totalPremiumVal, true);
-        let newTrade = { 
-            id: nextId++, 
-            scrip, expiry, lotSize, 
-            buyPremiumPerLot: premium, 
-            buyDate, 
-            buyNotes: notes, 
-            totalBuyPremium: totalPremiumVal, 
-            buyCharges 
-        };
+        let newTrade = { id: nextId++, scrip, expiry, strike, optionType, lotSize, buyPremiumPerLot: premium, buyDate, buyNotes: notes, totalBuyPremium: totalPremiumVal, buyCharges };
         openTrades.push(newTrade);
         updateOpenTradesUI();
         saveAllData();
-        
-        // Clear form
-        document.getElementById('scripName').value = ''; 
-        document.getElementById('premiumBuy').value = ''; 
-        document.getElementById('buyNotes').value = '';
-        let defDate = new Date(); defDate.setDate(defDate.getDate() + 14); 
-        document.getElementById('expiryDate').value = defDate.toISOString().slice(0,10);
-        document.getElementById('lotSize').value = '50';
+        document.getElementById('scripName').value = ''; document.getElementById('premiumBuy').value = ''; document.getElementById('buyNotes').value = '';
+        document.getElementById('strikePrice').value = '';
+        let defDate = new Date(); defDate.setDate(defDate.getDate() + 14); document.getElementById('expiryDate').value = defDate.toISOString().slice(0,10);
     }
 
     function sellExitTrade() {
@@ -486,105 +572,71 @@
         let exitNotesRaw = document.getElementById('exitNotes').value;
         let idx = openTrades.findIndex(t => t.id === selectedId);
         if (idx === -1) return;
-        
         let trade = openTrades[idx];
         let sellDate = new Date().toISOString().slice(0,10);
         let { grossPL, netPL, totalCharges } = computeNetOnSell(trade, sellPrem);
         let closedRecord = {
-            scrip: trade.scrip, expiry: trade.expiry, buyDate: trade.buyDate, sellDate, 
-            lotSize: trade.lotSize, buyPremium: trade.buyPremiumPerLot, sellPremium: sellPrem, 
-            grossPL, netPL, buyNotes: trade.buyNotes, exitNotes: exitNotesRaw, totalCharges
+            scrip: trade.scrip, expiry: trade.expiry, strike: trade.strike, optionType: trade.optionType,
+            buyDate: trade.buyDate, sellDate, lotSize: trade.lotSize, buyPremium: trade.buyPremiumPerLot,
+            sellPremium: sellPrem, grossPL, netPL, buyNotes: trade.buyNotes, exitNotes: exitNotesRaw, totalCharges
         };
         closedTrades.push(closedRecord);
         openTrades.splice(idx,1);
         updateOpenTradesUI();
         renderHistoryAndMetrics();
         saveAllData();
-        
-        document.getElementById('premiumSell').value = ''; 
-        document.getElementById('exitNotes').value = '';
+        document.getElementById('premiumSell').value = ''; document.getElementById('exitNotes').value = '';
     }
 
     function saveCapital() {
         let newCap = parseFloat(document.getElementById('capitalInput').value);
-        if (!isNaN(newCap) && newCap >= 0) {
-            capital = newCap;
-            document.getElementById('capitalDisplay').innerText = `Capital: ₹${capital.toLocaleString('en-IN')}`;
-            renderHistoryAndMetrics();
-            saveAllData();
-        }
+        if (!isNaN(newCap) && newCap >= 0) { capital = newCap; document.getElementById('capitalDisplay').innerText = `Capital: ₹${capital.toLocaleString('en-IN')}`; renderHistoryAndMetrics(); saveAllData(); }
     }
 
     function resetAll() {
-        if (confirm("⚠️ RESET will delete ALL trades and reset capital to ₹1,00,000. This cannot be undone! Export data first if needed.")) {
-            openTrades = [];
-            closedTrades = [];
-            nextId = 1;
-            capital = 100000;
+        if (confirm("RESET all trades & capital? This cannot be undone.")) {
+            openTrades = []; closedTrades = []; nextId = 1; capital = 100000;
             document.getElementById('capitalInput').value = 100000;
             document.getElementById('capitalDisplay').innerText = `Capital: ₹1,00,000`;
-            updateOpenTradesUI();
-            renderHistoryAndMetrics();
-            saveAllData();
-            alert("All data has been reset successfully!");
+            updateOpenTradesUI(); renderHistoryAndMetrics(); saveAllData();
         }
     }
 
     function exportToExcel() {
-        let sheetData = [["Scrip","Expiry","Buy Date","Sell Date","Lot","Buy Premium","Sell Premium","Gross P&L","Net P&L","Buy Notes","Exit Notes","Total Charges"]];
-        closedTrades.forEach(t => {
-            sheetData.push([t.scrip, t.expiry, t.buyDate, t.sellDate, t.lotSize, t.buyPremium, t.sellPremium, t.grossPL, t.netPL, t.buyNotes, t.exitNotes, t.totalCharges]);
-        });
-        let totalNet = closedTrades.reduce((s,t)=>s+t.netPL,0);
-        let winCount = closedTrades.filter(t=>t.netPL>0).length;
-        let winRate = closedTrades.length ? (winCount/closedTrades.length*100).toFixed(1) : 0;
-        sheetData.push([], ["SUMMARY", "", "", "", "", "", "Total Net P&L", totalNet, "Win Rate", winRate+"%"]);
+        let sheetData = [["Scrip","Expiry","Strike","Type","Buy Date","Sell Date","Lot","Buy Premium","Sell Premium","Net P&L","Buy Notes","Exit Notes","Total Charges"]];
+        closedTrades.forEach(t => { sheetData.push([t.scrip, t.expiry, t.strike, t.optionType, t.buyDate, t.sellDate, t.lotSize, t.buyPremium, t.sellPremium, t.netPL, t.buyNotes, t.exitNotes, t.totalCharges]); });
         let ws = XLSX.utils.aoa_to_sheet(sheetData);
         let wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "OptionTradeDiary");
-        XLSX.writeFile(wb, `Options_Diary_${new Date().toISOString().slice(0,19)}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, "OptionTrades");
+        XLSX.writeFile(wb, `Options_${new Date().toISOString().slice(0,19)}.xlsx`);
     }
 
-    // Dark Mode
     function toggleDarkMode() {
         document.body.classList.toggle('dark');
-        const btn = document.getElementById('darkModeToggle');
-        btn.textContent = document.body.classList.contains('dark') ? '☀️ Light Mode' : '🌙 Dark Mode';
-        if (equityChart) equityChart.update();
+        document.getElementById('darkModeToggle').textContent = document.body.classList.contains('dark') ? '☀️ Light Mode' : '🌙 Dark Mode';
         localStorage.setItem('dark_mode', document.body.classList.contains('dark'));
+        if (equityChart) equityChart.update();
     }
 
-    // Initialize
     function init() {
-        // Load dark mode preference
-        if (localStorage.getItem('dark_mode') === 'true') {
-            document.body.classList.add('dark');
-            document.getElementById('darkModeToggle').textContent = '☀️ Light Mode';
-        }
-        
-        // Load all trade data
+        if (localStorage.getItem('dark_mode') === 'true') { document.body.classList.add('dark'); document.getElementById('darkModeToggle').textContent = '☀️ Light Mode'; }
         loadAllData();
-        
-        // Set default expiry date
-        let defaultExp = new Date(); 
-        defaultExp.setDate(defaultExp.getDate() + 14);
+        let defaultExp = new Date(); defaultExp.setDate(defaultExp.getDate() + 14);
         document.getElementById('expiryDate').value = defaultExp.toISOString().slice(0,10);
-        
-        // Update UI
         updateOpenTradesUI();
         renderHistoryAndMetrics();
         document.getElementById('capitalDisplay').innerText = `Capital: ₹${capital.toLocaleString('en-IN')}`;
         document.getElementById('capitalInput').value = capital;
-        
-        // Bind events
         document.getElementById('addBuyBtn').addEventListener('click', addBuyTrade);
         document.getElementById('sellExitBtn').addEventListener('click', sellExitTrade);
         document.getElementById('saveCapitalBtn').addEventListener('click', saveCapital);
         document.getElementById('resetAllBtn').addEventListener('click', resetAll);
         document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
         document.getElementById('darkModeToggle').addEventListener('click', toggleDarkMode);
+        document.getElementById('saveEditBtn').addEventListener('click', saveEditedTrade);
+        document.getElementById('cancelEditBtn').addEventListener('click', () => document.getElementById('editModal').style.display = 'none');
+        window.onclick = (e) => { if (e.target === document.getElementById('editModal')) document.getElementById('editModal').style.display = 'none'; };
     }
-    
     init();
 </script>
 </body>
