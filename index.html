@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Advanced Options Trade Diary | Metrics + Dark Mode</title>
+    <!-- Chart.js CDN for equity curve -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- SheetJS (XLSX) for Excel export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Inter', 'Roboto', sans-serif;
+            transition: background-color 0.2s ease, border-color 0.2s, color 0.2s;
+        }
+
+        /* Light mode (default) */
+        :root {
+            --bg-body: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #334155;
+            --border: #cbd5e1;
+            --badge-bg: #e2e8f0;
+            --table-header: #f8fafc;
+            --metric-bg: #f1f5f9;
+            --btn-primary: #0f172a;
+            --btn-sell: #b45309;
+            --btn-reset: #dc2626;
+            --btn-export: #10b981;
+            --btn-capital: #3b82f6;
+            --input-bg: #fefefe;
+            --chart-grid: #ddd;
+        }
+
+        body.dark {
+            --bg-body: #0f172a;
+            --card-bg: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e6;
+            --border: #334155;
+            --badge-bg: #334155;
+            --table-header: #0f172a;
+            --metric-bg: #0f172a;
+            --btn-primary: #3b82f6;
+            --btn-sell: #f97316;
+            --btn-reset: #ef4444;
+            --btn-export: #10b981;
+            --btn-capital: #2563eb;
+            --input-bg: #0f172a;
+            --chart-grid: #334155;
+        }
+
+        body {
+            background: var(--bg-body);
+            margin: 0;
+            padding: 24px 20px;
+        }
+
+        .container {
+            max-width: 1500px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin: 0;
+            background: linear-gradient(135deg, #3b82f6, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .capital-card {
+            background: var(--card-bg);
+            padding: 12px 24px;
+            border-radius: 32px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 20px;
+            align-items: baseline;
+            flex-wrap: wrap;
+        }
+
+        .capital-card label {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .capital-card input {
+            padding: 8px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            width: 140px;
+            font-weight: 500;
+            background: var(--input-bg);
+            color: var(--text-primary);
+        }
+
+        .btn-capital {
+            background: var(--btn-capital);
+            border: none;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .reset-btn {
+            background: var(--btn-reset);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .export-btn {
+            background: var(--btn-export);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .darkmode-toggle {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 40px;
+            padding: 8px 20px;
+            cursor: pointer;
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        .flex-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+        }
+
+        .left-panel {
+            flex: 1.2;
+            min-width: 320px;
+        }
+
+        .right-panel {
+            flex: 2.5;
+            min-width: 520px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 28px;
+            padding: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            border-left: 5px solid #3b82f6;
+            padding-left: 14px;
+            color: var(--text-primary);
+        }
+
+        .trade-form {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .form-row label {
+            width: 110px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        input, select, textarea {
+            flex: 1;
+            padding: 10px 12px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            background: var(--input-bg);
+            color: var(--text-primary);
+        }
+
+        textarea {
+            min-width: 200px;
+        }
+
+        .badge {
+            background: var(--badge-bg);
+            padding: 4px 10px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            color: var(--text-primary);
+        }
+
+        .trade-btn {
+            background: var(--btn-primary);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .trade-btn.sell {
+            background: var(--btn-sell);
+        }
+
+        .trade-table {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        th, td {
+            padding: 10px 6px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            color: var(--text-primary);
+        }
+
+        th {
+            background: var(--table-header);
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background: var(--metric-bg);
+            border-radius: 20px;
+            padding: 12px 12px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+
+        .chart-container {
+            max-height: 280px;
+            margin-top: 16px;
+        }
+
+        .notes-msg {
+            font-style: italic;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+        }
+
+        button:active {
+            transform: scale(0.97);
+        }
+
+        @media (max-width: 780px) {
+            .form-row label {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📊 Option Master Diary · Full Charges + Advanced Metrics</h1>
+        <div class="flex-buttons">
+            <button id="darkModeToggle" class="darkmode-toggle">🌙 Dark Mode</button>
+            <button id="resetAllBtn" class="reset-btn">⟳ RESET ALL</button>
+            <button id="exportExcelBtn" class="export-btn">📎 Export Excel</button>
+        </div>
+    </div>
+
+    <div class="capital-card">
+        <span>💰 Manual Capital (₹)</span>
+        <input type="number" id="capitalInput" step="1000" value="100000">
+        <button id="saveCapitalBtn" class="btn-capital">Save Capital</button>
+        <span class="badge" id="capitalDisplay">Capital: ₹1,00,000</span>
+    </div>
+
+    <div class="dashboard">
+        <!-- LEFT PANEL -->
+        <div class="left-panel">
+            <div class="card">
+                <div class="card-title">📝 Add New Trade (Buy)</div>
+                <div class="trade-form" id="buyTradeForm">
+                    <div class="form-row"><label>Scrip Name</label><input type="text" id="scripName" placeholder="NIFTY, BANKNIFTY"></div>
+                    <div class="form-row"><label>Expiry Date</label><input type="date" id="expiryDate"></div>
+                    <div class="form-row"><label>Lot Size</label><input type="number" id="lotSize" value="50"></div>
+                    <div class="form-row"><label>Premium (₹/lot)</label><input type="number" id="premiumBuy" step="0.01" placeholder="Premium"></div>
+                    <div class="form-row"><label>Buy Notes</label><textarea id="buyNotes" rows="2"></textarea></div>
+                    <div class="notes-msg">📅 Buy Date auto = Today</div>
+                    <button id="addBuyBtn" class="trade-btn">➕ BUY OPTION</button>
+                </div>
+                <div class="card-title" style="margin-top: 20px;">🔁 Exit Position (Sell)</div>
+                <div class="trade-form">
+                    <div class="form-row"><label>Select Open</label><select id="openTradeSelect"></select></div>
+                    <div class="form-row"><label>Sell Premium (₹)</label><input type="number" id="premiumSell" step="0.01"></div>
+                    <div class="form-row"><label>Exit Notes</label><textarea id="exitNotes" rows="2"></textarea></div>
+                    <div class="notes-msg">📅 Exit Date auto = Today</div>
+                    <button id="sellExitBtn" class="trade-btn sell">💸 CLOSE POSITION</button>
+                </div>
+                <div class="card">
+                    <div class="card-title">⚡ Active Positions (Max 3)</div>
+                    <div id="openPositionsList" style="font-size:0.9rem; max-height:180px; overflow-y:auto;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL -->
+        <div class="right-panel">
+            <div class="card">
+                <div class="card-title">📈 Advanced Metrics</div>
+                <div id="metricsContainer" class="metrics-grid"></div>
+            </div>
+            <div class="card">
+                <div class="card-title">📜 Closed Trades History</div>
+                <div class="trade-table">
+                    <table id="historyTable">
+                        <thead><tr><th>Scrip</th><th>Expiry</th><th>Buy Date</th><th>Sell Date</th><th>Lot</th><th>Buy Prem</th><th>Sell Prem</th><th>Gross P&L</th><th>Net P&L</th><th>Buy Notes</th><th>Exit Notes</th></tr></thead>
+                        <tbody id="historyBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">📉 Equity Curve (Cumulative Net P&L + Capital)</div>
+                <div class="chart-container"><canvas id="equityChart" width="400" height="200"></canvas></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ---------- Charges Configuration ----------
+    const BROKERAGE = 20;
+    const STT_PERCENT = 0.1;
+    const EXCHANGE_RATE = 0.053 / 100;
+    const GST_RATE = 0.18;
+    const SEBI_FEE_RATE = 10 / 10000000; // ₹10 per crore
+    const STAMP_DUTY = 0.003 / 100;
+
+    function calculateLegCharges(premiumTotal, isBuySide) {
+        let brokerage = BROKERAGE;
+        let exchangeFee = premiumTotal * EXCHANGE_RATE;
+        let sebiFee = premiumTotal * SEBI_FEE_RATE;
+        let gst = (brokerage + exchangeFee + sebiFee) * GST_RATE;
+        let total = brokerage + exchangeFee + sebiFee + gst;
+        if (isBuySide) total += premiumTotal * STAMP_DUTY;
+        return total;
+    }
+    function calculateSTT(premiumTotal) { return premiumTotal * (STT_PERCENT / 100); }
+
+    // ----- Global State -----
+    let capital = 100000;
+    let openTrades = [];     // { id, scrip, expiry, lotSize, buyPremiumPerLot, buyDate, buyNotes, totalBuyPremium, buyCharges }
+    let closedTrades = [];   // { scrip, expiry, buyDate, sellDate, lotSize, buyPremium, sellPremium, grossPL, netPL, buyNotes, exitNotes, totalCharges }
+    let nextId = 1;
+    let equityChart = null;
+
+    // DOM elements
+    const capitalInput = document.getElementById('capitalInput');
+    const saveCapitalBtn = document.getElementById('saveCapitalBtn');
+    const capitalDisplay = document.getElementById('capitalDisplay');
+    const addBuyBtn = document.getElementById('addBuyBtn');
+    const sellExitBtn = document.getElementById('sellExitBtn');
+    const openTradeSelect = document.getElementById('openTradeSelect');
+    const openPositionsListDiv = document.getElementById('openPositionsList');
+    const historyBody = document.getElementById('historyBody');
+    const resetAllBtn = document.getElementById('resetAllBtn');
+    const exportExcelBtn = document.getElementById('exportExcelBtn');
+    const metricsContainer = document.getElementById('metricsContainer');
+    const darkModeToggle = document.getElementById('darkModeToggle');
+
+    // Helper functions
+    function updateOpenTradesUI() {
+        openTradeSelect.innerHTML = '<option value="">-- Select position --</option>';
+        openTrades.forEach(t => {
+            let opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = `${t.scrip} | Exp:${t.expiry} | Lots:${t.lotSize} | Buy: ₹${t.buyPremiumPerLot} | ${t.buyDate}`;
+            openTradeSelect.appendChild(opt);
+        });
+        if (openTrades.length === 0) openPositionsListDiv.innerHTML = '<span class="badge">✅ No active positions. Max 3 slots.</span>';
+        else {
+            let html = `<ul style="margin:0; padding-left:18px;">`;
+            openTrades.forEach(t => { html += `<li><strong>${t.scrip}</strong> (${t.expiry}) | Lot:${t.lotSize} | Buy ₹${t.buyPremiumPerLot} | Notes: ${t.buyNotes || '-'}</li>`; });
+            html += `</ul><div class="badge">Open: ${openTrades.length}/3</div>`;
+            openPositionsListDiv.innerHTML = html;
+        }
+    }
+
+    function computeNetOnSell(buyObj, sellPremiumPerLot, sellDate, exitNotes) {
+        let lot = buyObj.lotSize;
+        let totalBuy = lot * buyObj.buyPremiumPerLot;
+        let totalSell = lot * sellPremiumPerLot;
+        let grossPL = totalSell - totalBuy;
+        let sellCharges = calculateLegCharges(totalSell, false);
+        let stt = calculateSTT(totalSell);
+        let totalCharges = buyObj.buyCharges + sellCharges + stt;
+        let netPL = grossPL - totalCharges;
+        return { grossPL, netPL, totalCharges, sellCharges, stt };
+    }
+
+    addBuyBtn.addEventListener('click', () => {
+        if (openTrades.length >= 3) { alert("Maximum 3 open positions allowed."); return; }
+        let scrip = document.getElementById('scripName').value.trim();
+        let expiry = document.getElementById('expiryDate').value;
+        let lotSize = parseInt(document.getElementById('lotSize').value);
+        let premium = parseFloat(document.getElementById('premiumBuy').value);
+        let notes = document.getElementById('buyNotes').value;
+        if (!scrip || !expiry || isNaN(lotSize) || lotSize <= 0 || isNaN(premium) || premium <= 0) { alert("Fill all fields correctly."); return; }
+        let buyDate = new Date().toISOString().slice(0,10);
+        let totalPremiumVal = lotSize * premium;
+        let buyCharges = calculateLegCharges(totalPremiumVal, true);
+        let newTrade = { id: nextId++, scrip, expiry, lotSize, buyPremiumPerLot: premium, buyDate, buyNotes: notes, totalBuyPremium: totalPremiumVal, buyCharges };
+        openTrades.push(newTrade);
+        updateOpenTradesUI();
+        document.getElementById('scripName').value = ''; document.getElementById('expiryDate').value = ''; document.getElementById('lotSize').value = '50';
+        document.getElementById('premiumBuy').value = ''; document.getElementById('buyNotes').value = '';
+        let defDate = new Date(); defDate.setDate(defDate.getDate() + 14); document.getElementById('expiryDate').value = defDate.toISOString().slice(0,10);
+    });
+
+    sellExitBtn.addEventListener('click', () => {
+        let selectedId = parseInt(openTradeSelect.value);
+        if (isNaN(selectedId)) { alert("Select open trade."); return; }
+        let sellPrem = parseFloat(document.getElementById('premiumSell').value);
+        if (isNaN(sellPrem) || sellPrem < 0) { alert("Valid sell premium."); return; }
+        let exitNotesRaw = document.getElementById('exitNotes').value;
+        let idx = openTrades.findIndex(t => t.id === selectedId);
+        if (idx === -1) return;
+        let trade = openTrades[idx];
+        let sellDate = new Date().toISOString().slice(0,10);
+        let { grossPL, netPL, totalCharges } = computeNetOnSell(trade, sellPrem, sellDate, exitNotesRaw);
+        let closedRecord = {
+            scrip: trade.scrip, expiry: trade.expiry, buyDate: trade.buyDate, sellDate, lotSize: trade.lotSize,
+            buyPremium: trade.buyPremiumPerLot, sellPremium: sellPrem, grossPL, netPL, buyNotes: trade.buyNotes,
+            exitNotes: exitNotesRaw, totalCharges
+        };
+        closedTrades.push(closedRecord);
+        openTrades.splice(idx,1);
+        updateOpenTradesUI();
+        document.getElementById('premiumSell').value = ''; document.getElementById('exitNotes').value = '';
+        renderHistoryAndMetrics();
+    });
+
+    function renderHistoryAndMetrics() {
+        // History table
+        if (closedTrades.length === 0) historyBody.innerHTML = '<tr><td colspan="11" style="text-align:center;">No closed trades</td></tr>';
+        else {
+            let html = '';
+            closedTrades.forEach(t => {
+                html += `<tr>
+                    <td>${escapeHtml(t.scrip)}</td><td>${t.expiry}</td><td>${t.buyDate}</td><td>${t.sellDate}</td>
+                    <td>${t.lotSize}</td><td>₹${t.buyPremium.toFixed(2)}</td><td>₹${t.sellPremium.toFixed(2)}</td>
+                    <td style="color:${t.grossPL>=0?'green':'red'}">₹${t.grossPL.toFixed(2)}</td>
+                    <td style="color:${t.netPL>=0?'green':'red'}">₹${t.netPL.toFixed(2)}</td>
+                    <td>${escapeHtml(t.buyNotes).substring(0,25)}</td><td>${escapeHtml(t.exitNotes).substring(0,25)}</td>
+                </tr>`;
+            });
+            historyBody.innerHTML = html;
+        }
+
+        // Advanced Metrics
+        let totalNet = 0, totalGross = 0, totalChargesSum = 0, winners = 0, losers = 0;
+        let allNetPLs = [];
+        let winningTradesList = [], losingTradesList = [];
+        closedTrades.forEach(t => {
+            totalNet += t.netPL;
+            totalGross += t.grossPL;
+            totalChargesSum += t.totalCharges;
+            allNetPLs.push(t.netPL);
+            if (t.netPL > 0) { winners++; winningTradesList.push(t.netPL); }
+            else if (t.netPL < 0) { losers++; losingTradesList.push(t.netPL); }
+        });
+        let tradeCount = closedTrades.length;
+        let winRate = tradeCount ? (winners / tradeCount * 100).toFixed(1) : 0;
+        let avgWin = winningTradesList.length ? (winningTradesList.reduce((a,b)=>a+b,0)/winningTradesList.length).toFixed(2) : 0;
+        let avgLoss = losingTradesList.length ? (losingTradesList.reduce((a,b)=>a+b,0)/losingTradesList.length).toFixed(2) : 0;
+        let bestTrade = tradeCount ? Math.max(...allNetPLs).toFixed(2) : 0;
+        let worstTrade = tradeCount ? Math.min(...allNetPLs).toFixed(2) : 0;
+        let profitFactor = 0;
+        let grossWins = winningTradesList.reduce((a,b)=>a+b,0);
+        let grossLossesAbs = Math.abs(losingTradesList.reduce((a,b)=>a+b,0));
+        if (grossLossesAbs !== 0) profitFactor = (grossWins / grossLossesAbs).toFixed(2);
+        else profitFactor = grossWins > 0 ? "∞" : "0";
+        let expectancy = tradeCount ? (totalNet / tradeCount).toFixed(2) : 0;
+        let finalCapital = capital + totalNet;
+        let returnPct = capital ? ((totalNet / capital) * 100).toFixed(2) : 0;
+
+        metricsContainer.innerHTML = `
+            <div class="metric-card"><div class="metric-value">₹${totalNet.toFixed(2)}</div><div class="metric-label">Net P&L</div></div>
+            <div class="metric-card"><div class="metric-value">${winRate}%</div><div class="metric-label">Win Rate</div></div>
+            <div class="metric-card"><div class="metric-value">₹${avgWin}</div><div class="metric-label">Avg Win</div></div>
+            <div class="metric-card"><div class="metric-value">₹${avgLoss}</div><div class="metric-label">Avg Loss</div></div>
+            <div class="metric-card"><div class="metric-value">₹${bestTrade}</div><div class="metric-label">Best Trade</div></div>
+            <div class="metric-card"><div class="metric-value">₹${worstTrade}</div><div class="metric-label">Worst Trade</div></div>
+            <div class="metric-card"><div class="metric-value">${profitFactor}</div><div class="metric-label">Profit Factor</div></div>
+            <div class="metric-card"><div class="metric-value">₹${expectancy}</div><div class="metric-label">Expectancy/Trade</div></div>
+            <div class="metric-card"><div class="metric-value">₹${totalChargesSum.toFixed(2)}</div><div class="metric-label">Total Charges</div></div>
+            <div class="metric-card"><div class="metric-value">${returnPct}%</div><div class="metric-label">Return on Capital</div></div>
+            <div class="metric-card"><div class="metric-value">₹${finalCapital.toFixed(2)}</div><div class="metric-label">Current Equity</div></div>
+        `;
+
+        // Equity Curve
+        let equityPoints = [capital];
+        let running = capital;
+        for (let trade of closedTrades) {
+            running += trade.netPL;
+            equityPoints.push(running);
+        }
+        let labels = equityPoints.map((_,idx) => idx === 0 ? 'Start' : `T${idx}`);
+        if (equityChart) equityChart.destroy();
+        let ctx = document.getElementById('equityChart').getContext('2d');
+        equityChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets: [{ label: 'Equity (₹)', data: equityPoints, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.2 }] },
+            options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `₹${ctx.raw.toFixed(2)}` } } } }
+        });
+    }
+
+    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])); }
+
+    saveCapitalBtn.addEventListener('click', () => {
+        let newCap = parseFloat(capitalInput.value);
+        if (!isNaN(newCap) && newCap >= 0) capital = newCap;
+        capitalDisplay.innerText = `Capital: ₹${capital.toLocaleString('en-IN')}`;
+        renderHistoryAndMetrics();
+    });
+
+    resetAllBtn.addEventListener('click', () => {
+        if (confirm("RESET all trades & capital? Export data first if needed.")) {
+            openTrades = [];
+            closedTrades = [];
+            nextId = 1;
+            capital = 100000;
+            capitalInput.value = 100000;
+            capitalDisplay.innerText = `Capital: ₹1,00,000`;
+            updateOpenTradesUI();
+            renderHistoryAndMetrics();
+        }
+    });
+
+    exportExcelBtn.addEventListener('click', () => {
+        let sheetData = [["Scrip","Expiry","Buy Date","Sell Date","Lot","Buy Premium","Sell Premium","Gross P&L","Net P&L","Buy Notes","Exit Notes","Total Charges"]];
+        closedTrades.forEach(t => {
+            sheetData.push([t.scrip, t.expiry, t.buyDate, t.sellDate, t.lotSize, t.buyPremium, t.sellPremium, t.grossPL, t.netPL, t.buyNotes, t.exitNotes, t.totalCharges]);
+        });
+        let summary = ["SUMMARY","","","","","","Total Net P&L", closedTrades.reduce((s,t)=>s+t.netPL,0), "Win Rate", (closedTrades.length?(closedTrades.filter(t=>t.netPL>0).length/closedTrades.length*100).toFixed(1):0)+"%"];
+        sheetData.push([], summary);
+        let ws = XLSX.utils.aoa_to_sheet(sheetData);
+        let wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "OptionTradeDiary");
+        XLSX.writeFile(wb, `Options_Diary_${new Date().toISOString().slice(0,19)}.xlsx`);
+    });
+
+    // Dark Mode
+    darkModeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark');
+        darkModeToggle.textContent = document.body.classList.contains('dark') ? '☀️ Light Mode' : '🌙 Dark Mode';
+        if (equityChart) equityChart.update(); // refresh colors
+    });
+
+    function init() {
+        let defaultExp = new Date(); defaultExp.setDate(defaultExp.getDate() + 14);
+        document.getElementById('expiryDate').value = defaultExp.toISOString().slice(0,10);
+        updateOpenTradesUI();
+        renderHistoryAndMetrics();
+        capitalDisplay.innerText = `Capital: ₹${capital.toLocaleString('en-IN')}`;
+        capitalInput.value = capital;
+    }
+    init();
+</script>
+</body>
+</html>
